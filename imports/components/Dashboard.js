@@ -32,13 +32,122 @@ class Dashboard extends React.Component {
   }
 
   startChat(users, peer) {
+    // //save context
+    // var dashboard = this;
+    // var user = users[0];
+    // var myVideo;
+    // var theirVideo;
+    // var strm;
+
+    // init = () => {
+    //   //get html video elements
+    //   myVideo = this.refs.myVideo;
+    //   theirVideo = this.refs.theirVideo;
+
+
+    //   navigator.getUserMedia({audio: true, video: true}, function (stream) {
+    //     strm = stream;
+    //     dashboard.setState({localStream: stream});
+    //     dashboard.toggleLoading(true);
+    //     myVideo.src = URL.createObjectURL(stream);
+    //     Meteor.users.update({_id: Meteor.userId()}, {
+    //       $set: {
+    //         'profile.peerId': peer.id,
+    //         'profile.streamId': stream.id
+    //       }
+    //     });
+    //   });
+    //   user = users[0];
+    // }
+
+    // setTimeout(function() {
+    //   var incomingCall = function(incoming){
+    //     init();
+    //     dashboard.setState({currentCall: incoming});
+    //     incoming.answer(strm);
+    //     incoming.on('stream', function(theirStream){
+    //       dashboard.toggleLoading(false);
+    //       theirVideo.src = URL.createObjectURL(theirstream);
+    //       dashboard.setPartner(theirStream.id);
+    //     });
+    //   }
+
+    //   peer.on('call', incomingCall.bind(dashboard));
+
+    //   setTimeout(function(){
+    //     if (!dashboard.state.currentCall) {
+    //       var outgoingCall = peer.call(user.profile.peerId, strm);
+    //       dashboard.setState({ currentCall: outgoingCall });
+    //       outgoingCall.on('stream', function (theirStream) {
+    //         dashboard.toggleLoading(false);
+    //         theirVideo.src = URL.createObjectURL(theirStream);
+    //         dashboard.setPartner(theirStream.id);
+    //       });
+    //     }
+    //   }, 100);
+
+    //   peer.on('close', dashboard.endChat);
+
+    // }, 200);
+    //   setTimeout(function() {
+    //     console.log("current call: ", dashboard.state.currentCall);
+    //     // receive a call from other person
+    //     var incomingCall = function(incoming) {
+    //       dashboard.setState({currentCall: incoming});
+    //       incoming.answer(stream);
+    //       incoming.on('stream', function(theirStream){
+    //         dashboard.toggleLoading(false);
+    //         theirVideo.src = URL.createObjectURL(theirStream);
+    //         dashboard.setPartner(theirStream.id);
+    //       });
+    //     }
+
+    //     if (!dashboard.state.currentCall) {
+    //       peer.on('call', incomingCall.bind(this));
+    //     }
+    //     // if (!dashboard.state.currentCall) {
+    //     //   peer.on('call', function (incomingCall) {
+    //     //     console.log("peer: ", peer, "call: ", incomingCall);
+    //     //     dashboard.setState({ currentCall: incomingCall });
+    //     //     incomingCall.answer(stream);
+    //     //     incomingCall.on('stream', function (theirStream) {
+    //     //       dashboard.toggleLoading(false);
+    //     //       theirVideo.src = URL.createObjectURL(theirStream);
+    //     //       dashboard.setPartner(theirStream.id);
+    //     //     });
+    //     //   });
+    //     // }
+
+    //     // if call not received first, call other person
+    //     if (!dashboard.state.currentCall) {
+    //       var outgoingCall = peer.call(user.profile.peerId, stream);
+    //       dashboard.setState({ currentCall: outgoingCall });
+    //       outgoingCall.on('stream', function (theirStream) {
+    //         dashboard.toggleLoading(false);
+    //         theirVideo.src = URL.createObjectURL(theirStream);
+    //         dashboard.setPartner(theirStream.id);
+    //       });
+    //     }
+
+    //     // if other person ends chat, end chat too
+    //     // dashboard.state.currentCall.on('close', function() {
+    //     //   dashboard.endChat();
+    //     // });
+    //   }, 200);
+    // }, function (error) {
+    //   console.log(error);
+    // });
+
+
+
     // save context
     var dashboard = this;
+    var listening = true;
 
     // get html video elements
     var myVideo = this.refs.myVideo;
     var theirVideo = this.refs.theirVideo;
-    
+
     // get audio/video permissions
     navigator.getUserMedia({ audio: true, video: true }, function (stream) {
       // save your users own feed to state
@@ -63,17 +172,27 @@ class Dashboard extends React.Component {
 
       // setTimeout needed to ensure partner can be found
       setTimeout(function() {
+        console.log("current call: ", dashboard.state.currentCall);
         // receive a call from other person
-        if (!dashboard.state.currentCall) {
-          peer.on('call', function (incomingCall) {
-            dashboard.setState({ currentCall: incomingCall });
-            incomingCall.answer(stream);
-            incomingCall.on('stream', function (theirStream) {
-              dashboard.toggleLoading(false);
-              theirVideo.src = URL.createObjectURL(theirStream);
-              dashboard.setPartner(theirStream.id);
-            });
+        var incomingCall = function(incoming) {
+          if (listening === false){
+            return;
+          }
+          listening = false;
+          console.log(this);
+          dashboard.setState({currentCall: incoming});
+          incoming.answer(stream);
+          this.on('call', function(){console.log("git hiiii")});
+          incoming.on('stream', function(theirStream){
+            dashboard.toggleLoading(false);
+            theirVideo.src = URL.createObjectURL(theirStream);
+            dashboard.setPartner(theirStream.id);
           });
+        }
+
+        if (!dashboard.state.currentCall) {
+          console.log(peer);
+          peer.on('call', incomingCall.bind(peer));
         }
 
         // if call not received first, call other person
@@ -81,6 +200,7 @@ class Dashboard extends React.Component {
           var outgoingCall = peer.call(user.profile.peerId, stream);
           dashboard.setState({ currentCall: outgoingCall });
           outgoingCall.on('stream', function (theirStream) {
+            listening = false;
             dashboard.toggleLoading(false);
             theirVideo.src = URL.createObjectURL(theirStream);
             dashboard.setPartner(theirStream.id);
@@ -92,27 +212,27 @@ class Dashboard extends React.Component {
           dashboard.endChat();
         });
       }, 200);
-    }, function (error) { 
-      console.log(error); 
+    }, function (error) {
+      console.log(error);
     });
   }
 
-  endChat() {
+  endChat(peer) {
     // close peerjs connection
     this.state.currentCall.close();
- 
+    console.log("peer: ", peer);
     // turn off camera and microphone
     this.state.localStream.getTracks().forEach(function(track) {
+      console.log(track);
       track.stop();
     });
-
     // remove streams from html video elements
-    this.refs.myVideo.src = null;
-    this.refs.theirVideo.src = null;
-    
-    this.setState({ 
+    this.refs.myVideo = {};
+    this.refs.theirVideo = {};
+
+    this.setState({
       currentCall: false,
-      callDone: true 
+      callDone: true
     });
   }
 
@@ -154,7 +274,7 @@ class Dashboard extends React.Component {
 
 
 
-    var url = 'https://www.googleapis.com/language/translate/v2?key=AIzaSyC9JmWKmSXKwWuB82g3aZKF9yiIczu5pao&q=' + 
+    var url = 'https://www.googleapis.com/language/translate/v2?key=AIzaSyC9JmWKmSXKwWuB82g3aZKF9yiIczu5pao&q=' +
               textToTranslate +
               '&source=' + sourceLang + '&'
               + 'target=' + targetLang;
@@ -187,7 +307,7 @@ class Dashboard extends React.Component {
                 {this.state.callLoading &&
                   <Waiting />
                 }
-                <video ref='myVideo' id='myVideo' muted='true' autoPlay='true' 
+                <video ref='myVideo' id='myVideo' muted='true' autoPlay='true'
                   className={this.state.callLoading ? 'hidden' : null}></video>
                 <video ref='theirVideo' id='theirVideo' muted='true' autoPlay='true'
                   className={this.state.callLoading ? 'hidden' : null}></video>
@@ -195,7 +315,7 @@ class Dashboard extends React.Component {
             }
 
             {!this.state.currentCall && this.state.callDone &&
-              <Review 
+              <Review
                 partner={this.state.partner}
                 clearPartner={this.clearPartner.bind(this)}
               />
@@ -210,7 +330,7 @@ class Dashboard extends React.Component {
         </div>
         <div className='bottom'>
           <div className='text-box'>
-            { 
+            {
               this.state.partner &&
               <div className='clock-suggestion-wrapper'>
                 <Clock partner={this.state.partner} callDone={this.state.callDone} />
@@ -228,7 +348,7 @@ class Dashboard extends React.Component {
             </div>
             <div className='language'>
               {
-               `${this.props.user.profile.language} / 
+               `${this.props.user.profile.language} /
                 ${this.props.user.profile.learning}`
               }
             </div>
@@ -242,7 +362,7 @@ class Dashboard extends React.Component {
                 </button>
               }
               {this.state.currentCall &&
-                <button onClick={this.endChat.bind(this)}>
+                <button onClick={this.endChat.bind(this, this.props.peer)}>
                   End Chat
                 </button>
               }
