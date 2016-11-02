@@ -10,6 +10,7 @@ import Review            from './Review';
 import Waiting           from './Waiting';
 import Welcome           from './Welcome';
 import GoogleTranslate   from './GoogleTranslate';
+import SpeechToTextBox   from './SpeechToTextBox';
 var request = require('request');
 var languageCodes = require( '../../public/languageCodes');
 
@@ -24,7 +25,10 @@ class Dashboard extends React.Component {
       callLoading: false,
       partner: false,
       translate: null,
-      translated: null
+      translated: null,
+      speechToText: false,
+      currentLanguage: null,
+      oppositeLanguage: null,
     };
 
     this.startChat.bind(this);
@@ -34,6 +38,7 @@ class Dashboard extends React.Component {
   startChat(users, peer) {
     // save context
     var dashboard = this;
+    var listening = true;
 
     // get html video elements
     var myVideo = this.refs.myVideo;
@@ -66,9 +71,13 @@ class Dashboard extends React.Component {
         // receive a call from other person
         if (!dashboard.state.currentCall) {
           peer.on('call', function (incomingCall) {
+            if ( listening === false) {
+              return;
+            }
             dashboard.setState({ currentCall: incomingCall });
             incomingCall.answer(stream);
             incomingCall.on('stream', function (theirStream) {
+              listening = false;
               dashboard.toggleLoading(false);
               theirVideo.src = URL.createObjectURL(theirStream);
               dashboard.setPartner(theirStream.id);
@@ -81,6 +90,7 @@ class Dashboard extends React.Component {
           var outgoingCall = peer.call(user.profile.peerId, stream);
           dashboard.setState({ currentCall: outgoingCall });
           outgoingCall.on('stream', function (theirStream) {
+            listening = false;
             dashboard.toggleLoading(false);
             theirVideo.src = URL.createObjectURL(theirStream);
             dashboard.setPartner(theirStream.id);
@@ -116,6 +126,13 @@ class Dashboard extends React.Component {
     });
   }
 
+  setCurrentLanguage(language, oppositeLanguage) {
+    this.setState({
+      currentLanguage: language,
+      oppositeLanguage: oppositeLanguage
+    });
+  }
+
   toggleLoading(loading) {
     this.setState({
       callLoading: loading
@@ -146,13 +163,12 @@ class Dashboard extends React.Component {
     });
   };
 
+
   handleTextSubmit() {
     var textToTranslate = this.state.translate;
     var sourceLang = languageCodes[this.props.user.profile.language.toLowerCase()];
     var targetLang = languageCodes[this.props.user.profile.learning.toLowerCase()];
     var context = this;
-
-
 
     var url = 'https://www.googleapis.com/language/translate/v2?key=AIzaSyC9JmWKmSXKwWuB82g3aZKF9yiIczu5pao&q=' + 
               textToTranslate +
@@ -163,9 +179,7 @@ class Dashboard extends React.Component {
       if (err) {
         console.error(err);
       } else {
-        console.log(JSON.parse(body).data.translations[0].translatedText);
         var translatedText = (JSON.parse(body).data.translations[0].translatedText);
-        console.log('this is the translated text', translatedText);
         context.setState({
           translated: translatedText
         });
@@ -186,6 +200,7 @@ class Dashboard extends React.Component {
       document.querySelector(".flip-container").classList.toggle('flip-forward');
     }
   }
+
 
 
   render() {
@@ -243,13 +258,23 @@ class Dashboard extends React.Component {
         </div>
         <div className='bottom'>
           <div className='text-box'>
-            { 
-              this.state.partner &&
-              <div className='clock-suggestion-wrapper'>
-                <Clock partner={this.state.partner} callDone={this.state.callDone} />
-                <GoogleTranslate translated={this.state.translated} handleTextChange={this.handleTextChange.bind(this)} handleTextSubmit={this.handleTextSubmit.bind(this)}/>
+          {
+            this.state.partner &&
+
+            <div className="clock-suggestion-wrapper">
+              <div className="flip-container">
+                <div className="flipper">
+                  <div className="front">
+                    <Clock setCurrentLanguage={this.setCurrentLanguage.bind(this)} partner={this.state.partner} callDone={this.state.callDone} handleSpeechActive={this.flipCard.bind(this)}/>
+                  </div>
+                  <div className="back">
+                    <SpeechToTextBox handleSpeechActive={this.flipCard.bind(this)} currentLanguage={this.state.currentLanguage} oppositeLanguage={this.state.oppositeLanguage}/>
+                  </div>
+                </div>
               </div>
-            }
+              <GoogleTranslate translated={this.state.translated} handleTextChange={this.handleTextChange.bind(this)} handleTextSubmit={this.handleTextSubmit.bind(this)}/>
+            </div>
+          }
             {
               !this.state.partner &&
               <div className='waiting-for-match'>Waiting for match...</div>
