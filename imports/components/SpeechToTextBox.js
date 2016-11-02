@@ -19,6 +19,7 @@ class SpeechToTextBox extends React.Component {
   	var context = this;
   	var handleTranslation = function (text) {
   	  var textToTranslate = text;
+      console.log('context.props.currentLanguage', context.props.currentLanguage)
   	  var sourceLang = languageCodes[context.props.currentLanguage];
   	  var targetLang = languageCodes[context.props.oppositeLanguage];
 

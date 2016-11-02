@@ -172,8 +172,16 @@ class Dashboard extends React.Component {
 
   handleTextSubmit() {
     var textToTranslate = this.state.translate;
-    var sourceLang = languageCodes[this.props.user.profile.language].toLowerCase();
-    var targetLang = languageCodes[this.props.user.profile.learning].toLowerCase();
+// <<<<<<< HEAD
+//     var sourceLang = languageCodes[this.props.user.profile.language].toLowerCase();
+//     var targetLang = languageCodes[this.props.user.profile.learning].toLowerCase();
+// ||||||| merged common ancestors
+//     var sourceLang = languageCodes[this.props.user.profile.language];
+//     var targetLang = languageCodes[this.props.user.profile.learning];
+// =======
+    var sourceLang = languageCodes[this.props.user.profile.language.toLowerCase()];
+    var targetLang = languageCodes[this.props.user.profile.learning.toLowerCase()];
+// >>>>>>> 5a236667fce2415d5122d90f55fbcd86078c9160
     var context = this;
 
 
@@ -196,17 +204,36 @@ class Dashboard extends React.Component {
     });
   }
 
+// <<<<<<< HEAD
 
-  flipCard() {
-     console.log(document.querySelector(".flip-container").className);
-      if (document.querySelector(".flip-container").className.includes('flip-activate')) {
-        document.querySelector(".flip-container").className = "flip-container"
+  flipCardTranslate() {
+     console.log(document.querySelector("#translate-container").className);
+      if (document.querySelector("#translate-container").className.includes('flip-activate')) {
+        document.querySelector("#translate-container").className = "flip-container"
       } else {
-        document.querySelector(".flip-container").className += ' flip-activate'
+        document.querySelector("#translate-container").className += ' flip-activate'
       }
    }
 
+// ||||||| merged common ancestors
+// =======
+  flipCardProfile() {
+    var classArray = document.querySelector("#profile-container").classList;
+    var isFlippedForward = classArray.contains('flip-forward');
+    var isFlippedBackward = classArray.contains('flip-backward');
+
+    if (isFlippedForward || isFlippedBackward) {
+      document.querySelector("#profile-container").classList.toggle('flip-forward');
+      document.querySelector("#profile-container").classList.toggle('flip-backward');
+    } else {
+      document.querySelector("#profile-container").classList.toggle('flip-forward');
+    }
+  }
+
+
+// >>>>>>> 5a236667fce2415d5122d90f55fbcd86078c9160
   render() {
+    var context = this;
     return (
       <div className='dashboard'>
         <div className='top'>
@@ -233,12 +260,30 @@ class Dashboard extends React.Component {
               />
             }
           </div>
-          <div className='profile'>
-            <div className='sign-out'>
-              <AccountsUIWrapper />
+
+
+            <div className="flip-container" id="profile-container">
+              <div className="flipper">
+                <div className="front">
+                  <div className='profile'>
+                    <div className='sign-out'>
+                      <img src='http://res.cloudinary.com/small-change/image/upload/v1478038849/BitmapIcon_lkjnj3.png'
+                       className='menu-icon' onClick={function(){context.flipCardProfile()}}/>
+                      <AccountsUIWrapper />
+                    </div>
+                    <UserProfile user={this.props.user}/>
+                  </div>
+                </div>
+                <div className="back">
+                  <div className='profile'>
+                  <img src='http://res.cloudinary.com/small-change/image/upload/v1478038849/BitmapIcon_lkjnj3.png'
+                   className='menu-icon' onClick={function(){context.flipCardProfile()}}/>
+                    <p> hello world </p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <UserProfile user={this.props.user}/>
-          </div>
+
         </div>
         <div className='bottom'>
           <div className='text-box'>
@@ -246,13 +291,13 @@ class Dashboard extends React.Component {
             this.state.partner &&
 
             <div className="clock-suggestion-wrapper">
-              <div className="flip-container">
+              <div className="flip-container bea" id="translate-container">
                 <div className="flipper">
                   <div className="front">
-                    <Clock setCurrentLanguage={this.setCurrentLanguage.bind(this)} partner={this.state.partner} callDone={this.state.callDone} handleSpeechActive={this.flipCard.bind(this)}/>
+                    <Clock setCurrentLanguage={this.setCurrentLanguage.bind(this)} partner={this.state.partner} callDone={this.state.callDone} handleSpeechActive={this.flipCardTranslate.bind(this)}/>
                   </div>
                   <div className="back">
-                    <SpeechToTextBox handleSpeechActive={this.flipCard.bind(this)} currentLanguage={this.state.currentLanguage} oppositeLanguage={this.state.oppositeLanguage}/>
+                    <SpeechToTextBox handleSpeechActive={this.flipCardTranslate.bind(this)} currentLanguage={this.state.currentLanguage} oppositeLanguage={this.state.oppositeLanguage}/>
                   </div>
                 </div>
               </div>
