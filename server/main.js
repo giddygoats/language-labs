@@ -1,4 +1,6 @@
-  import { Meteor } from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor';
+import Translations from './translations.js'
+
 
 Meteor.startup(function () {
 
@@ -10,6 +12,11 @@ Meteor.startup(function () {
     return Meteor.users.find({});
   });
 
+  Meteor.publish('translations', function () {
+    console.log(Translations.find().fetch());
+    return Translations.find({});
+  });
+
   Meteor.methods({
     'updateRating'({newReviews, _id}) {
       Meteor.users.update(_id,
@@ -18,4 +25,5 @@ Meteor.startup(function () {
     }
   });
 });
+
 

@@ -28,10 +28,15 @@ const AppContainer = createContainer(() => {
 
   const presencesSub = Meteor.subscribe('presences');
   const usersSub     = Meteor.subscribe('users');
+  Meteor.subscribe("translations", {
+    onReady: function () { console.log("onReady And the Items actually Arrive", arguments); },
+    onError: function () { console.log("onError", arguments); }
+  });
   const user         = Meteor.users.findOne(Meteor.userId());
   const userIds      = Meteor.presences.find().map(presence => presence.userId);
   const loading      = !usersSub.ready() && !presencesSub.ready();
-  
+
+
   const onlineUsers  = Meteor.users.find({ 
     $and: [ 
       { _id: { $in: userIds, $ne: Meteor.userId() } }, 
@@ -43,7 +48,7 @@ const AppContainer = createContainer(() => {
     onlineUsers,
     user,
     loading,
-    peer
+    peer,
   };
 }, App);
 

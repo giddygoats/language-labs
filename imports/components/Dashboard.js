@@ -127,6 +127,7 @@ class Dashboard extends React.Component {
   }
 
   setCurrentLanguage(language, oppositeLanguage) {
+    console.log('language in set current languge: ', language, ' oppositeLanguage: ', oppositeLanguage);
     this.setState({
       currentLanguage: language,
       oppositeLanguage: oppositeLanguage
@@ -168,6 +169,7 @@ class Dashboard extends React.Component {
     var textToTranslate = this.state.translate;
     var sourceLang = languageCodes[this.props.user.profile.language.toLowerCase()];
     var targetLang = languageCodes[this.props.user.profile.learning.toLowerCase()];
+
     var context = this;
 
     var url = 'https://www.googleapis.com/language/translate/v2?key=AIzaSyC9JmWKmSXKwWuB82g3aZKF9yiIczu5pao&q=' + 
@@ -183,21 +185,45 @@ class Dashboard extends React.Component {
         context.setState({
           translated: translatedText
         });
-        console.log('this is what state looks like', context.state.translated);
+
+        // in request, save translated text, plain text, fluent language, learning lanugauge
+        // and user id to Translations table 
+        const user_id = Meteor.userId();
+        console.log('Meteor.Translations ', Meteor.Translations);
+        Meteor.Translations.insert({
+                              userId: user_id,
+                              fromLanguage: context.props.user.profile.language,
+                              fromText: textToTranslate,
+                              toLanguage: context.props.user.profile.learning,
+                              toText: translatedText,
+                            })
       }
     });
+
   }
 
-  flipCard() {
-    var classArray = document.querySelector(".flip-container").classList;
-    var isFlippedForward = classArray.contains('flip-forward');
+
+
+  flipCardTranslate() {
+     console.log(document.querySelector("#translate-container").className);
+      if (document.querySelector("#translate-container").className.includes('flip-activate')) {
+        document.querySelector("#translate-container").className = "flip-container"
+      } else {
+        document.querySelector("#translate-container").className += ' flip-activate'
+      }
+   }
+
+
+  flipCardProfile() {
+    var classArray = document.querySelector("#profile-container").classList;
+      var isFlippedForward = classArray.contains('flip-forward');
     var isFlippedBackward = classArray.contains('flip-backward');
 
     if (isFlippedForward || isFlippedBackward) {
-      document.querySelector(".flip-container").classList.toggle('flip-forward');
-      document.querySelector(".flip-container").classList.toggle('flip-backward');
+      document.querySelector("#profile-container").classList.toggle('flip-forward');
+      document.querySelector("#profile-container").classList.toggle('flip-backward');
     } else {
-      document.querySelector(".flip-container").classList.toggle('flip-forward');
+      document.querySelector("#profile-container").classList.toggle('flip-forward');
     }
   }
 
@@ -205,6 +231,7 @@ class Dashboard extends React.Component {
 
   render() {
     var context = this;
+    console.log('state of dashboard: ', this.state);
     return (
       <div className='dashboard'>
         <div className='top'>
@@ -233,13 +260,13 @@ class Dashboard extends React.Component {
           </div>
 
 
-            <div className="flip-container">
+            <div className="flip-container" id="profile-container">
               <div className="flipper">
                 <div className="front">
                   <div className='profile'>
                     <div className='sign-out'>
                       <img src='http://res.cloudinary.com/small-change/image/upload/v1478038849/BitmapIcon_lkjnj3.png'
-                       className='menu-icon' onClick={function(){context.flipCard()}}/>
+                       className='menu-icon' onClick={function(){context.flipCardProfile()}}/>
                       <AccountsUIWrapper />
                     </div>
                     <UserProfile user={this.props.user}/>
@@ -248,7 +275,7 @@ class Dashboard extends React.Component {
                 <div className="back">
                   <div className='profile'>
                   <img src='http://res.cloudinary.com/small-change/image/upload/v1478038849/BitmapIcon_lkjnj3.png'
-                   className='menu-icon' onClick={function(){context.flipCard()}}/>
+                   className='menu-icon' onClick={function(){context.flipCardProfile()}}/>
                     <p> hello world </p>
                   </div>
                 </div>
@@ -262,13 +289,13 @@ class Dashboard extends React.Component {
             this.state.partner &&
 
             <div className="clock-suggestion-wrapper">
-              <div className="flip-container">
+              <div className="flip-container bea" id="translate-container">
                 <div className="flipper">
                   <div className="front">
-                    <Clock setCurrentLanguage={this.setCurrentLanguage.bind(this)} partner={this.state.partner} callDone={this.state.callDone} handleSpeechActive={this.flipCard.bind(this)}/>
+                    <Clock setCurrentLanguage={this.setCurrentLanguage.bind(this)} partner={this.state.partner} callDone={this.state.callDone} handleSpeechActive={this.flipCardTranslate.bind(this)}/>
                   </div>
                   <div className="back">
-                    <SpeechToTextBox handleSpeechActive={this.flipCard.bind(this)} currentLanguage={this.state.currentLanguage} oppositeLanguage={this.state.oppositeLanguage}/>
+                    <SpeechToTextBox handleSpeechActive={this.flipCardTranslate.bind(this)} currentLanguage={this.state.currentLanguage} oppositeLanguage={this.state.oppositeLanguage}/>
                   </div>
                 </div>
               </div>

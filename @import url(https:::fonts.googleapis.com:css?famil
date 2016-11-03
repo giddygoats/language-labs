@@ -74,6 +74,19 @@ textarea {
     position: relative;
 }
 
+.flip-translate-container {
+  perspective: 1000px;
+  transform: rotateY(0deg);
+    transition: 0.6s;
+    transform-style: preserve-3d;
+    position: relative;
+}
+
+.flip-translate-container, .front, .back {
+  width: 400px;
+  height: 160px;
+}
+
 .flip-activate {
   transform: rotateY(180deg);
     transition: 0.6s;
@@ -110,7 +123,6 @@ textarea {
 
 .button-wrapper {
   flex: 3;
-  display: flex;
   align-items: center;
   justify-content: center;
 
@@ -620,7 +632,6 @@ textarea {
 
       .button-wrapper {
         flex: 3;
-        display: flex;
         align-items: center;
         justify-content: center;
 
