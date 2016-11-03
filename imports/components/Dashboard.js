@@ -11,8 +11,9 @@ import Waiting           from './Waiting';
 import Welcome           from './Welcome';
 import GoogleTranslate   from './GoogleTranslate';
 import SpeechToTextBox   from './SpeechToTextBox';
+// import {speechCodes, languageCode} from '../../public/languageCodes'
 var request = require('request');
-var languageCodes = require( '../../public/languageCodes');
+var code = require('../../public/languageCodes');
 
 class Dashboard extends React.Component {
   constructor(props) {
@@ -26,11 +27,117 @@ class Dashboard extends React.Component {
       partner: false,
       translate: null,
       translated: null,
-      speechToText: false
+      speechToText: false,
+      currentLanguage: null,
+      oppositeLanguage: null,
     };
 
     this.startChat.bind(this);
     this.endChat.bind(this);
+  }
+
+  chatify(peer) {
+    var dashbaord, myVideo, theirVideo, clientID, users, partner, stream, client;
+
+    init = () => {
+      dashboard = this;
+      myVideo = this.refs.myVideo;
+      theirVideo = this.refs.theirVideo;
+
+      dashboard.toggleLoading(true);
+      clientID = Meteor.userId();
+      users = Meteor.users.find({}).fetch();
+      partner;
+      stream;
+
+      client = users.reduce(function(a, c){
+        return c._id === clientID ? c: a;
+      }, null)
+
+      Meteor.users.update({_id: clientID}, {$set: {'profile.peerId': peer.id}});
+
+      //establish a video/audio stream, then continue!
+      navigator.mediaDevices.getUserMedia({video: true, audio: true}).then(function(strm){
+        dashboard.setState({ localStream: strm });
+        stream = strm;
+        startify();
+      });
+
+    }
+    init();
+
+
+    //now that the stream is established, let's start streaming and find a partner!
+    var startify = function(){
+
+      //find a partner!  Look for someone with the same language who is listening for a call.
+      partner = users.filter(function(x){
+        return x.profile.status === 'listening' && x.profile.language.toLowerCase() === client.profile.learning.toLowerCase() && x.profile.learning.toLowerCase() === client.profile.language.toLowerCase();
+      })[0];
+      console.log('partner: ', partner);
+      //call handler: does partner exist?  If so, call them!  If not, start listening.
+      if (partner) {
+        Meteor.users.update({_id: clientID},{$set: {'profile.status': ('calling ' + partner._id)}});
+        var outgoingCall = peer.call(partner.profile.peerId, stream);
+        middleify(outgoingCall);
+      } else {
+        Meteor.users.update({_id: clientID}, {$set: {'profile.status': 'listening'}});
+      }
+    }
+
+    var answerify = function(incomingCall){
+      if (!stream){
+        init();
+      }
+      Meteor.users.update({_id: clientID}, {$set: {'profile.status': 'answering'}});
+      users = Meteor.users.find({}).fetch();
+      partner = users.reduce(function(a, c){return c.profile.status === ('calling ' + clientID) ? c : a})
+      incomingCall.answer(stream);
+      middleify(incomingCall);
+      peer.off('call', answerify);
+    }
+
+    peer.on('call', answerify)
+
+    //calls are established, middle call handler
+    var middleify = function(callStream){
+      console.log('callstream: ', callStream, partner);
+      dashboard.setState({ localStream: stream, currentCall: callStream, partner: partner });
+      Meteor.users.update({_id: clientID}, {$set: {'profile.status': 'streaming'/*, 'profile.peerId': peer.id, 'profile.streamId': myStream.id*/}});
+      var strm = function(theirStream) {
+        dashboard.toggleLoading(false);
+        console.log('streamifying');
+        theirVideo.src = URL.createObjectURL(theirStream);
+        myVideo.src = URL.createObjectURL(stream);
+        dashboard.setPartner(theirStream.id);
+        setTimeout(function(){endify(partner._id)}, 2000);
+        callstream.off('stream', strm);
+
+      };
+
+      callStream.on('stream', strm);
+    }
+
+    //periodic check to see if the partner has disconnected: if so, end call.
+    var endify = function(id){
+      console.log('so fetch: ', Meteor.users.find({_id: id}).fetch());
+      if (Meteor.users.find({_id: id}).fetch()[0].profile.status !== 'streaming' || dashboard.props.user.profile.status !== 'streaming') {
+        dashboard.endChat(clientID);
+      } else {
+        console.log(dashboard);
+        if (dashboard.props.user.profile.status === 'streaming'){
+          setTimeout(function(){
+            endify(id);
+          }, 2000);
+        }
+      }
+    }
+  }
+
+  endOfChat(){
+    Meteor.users.update({'_id': Meteor.userId()}, {$set: {'profile.status': 'waiting'}});
+    this.props.user.profile.status = 'waiting';
+    console.log(this);
   }
 
   startChat(users, peer) {
@@ -40,7 +147,7 @@ class Dashboard extends React.Component {
     // get html video elements
     var myVideo = this.refs.myVideo;
     var theirVideo = this.refs.theirVideo;
-    
+
     // get audio/video permissions
     navigator.getUserMedia({ audio: true, video: true }, function (stream) {
       // save your users own feed to state
@@ -68,9 +175,13 @@ class Dashboard extends React.Component {
         // receive a call from other person
         if (!dashboard.state.currentCall) {
           peer.on('call', function (incomingCall) {
+            if ( listening === false) {
+              return;
+            }
             dashboard.setState({ currentCall: incomingCall });
             incomingCall.answer(stream);
             incomingCall.on('stream', function (theirStream) {
+              listening = false;
               dashboard.toggleLoading(false);
               theirVideo.src = URL.createObjectURL(theirStream);
               dashboard.setPartner(theirStream.id);
@@ -83,6 +194,7 @@ class Dashboard extends React.Component {
           var outgoingCall = peer.call(user.profile.peerId, stream);
           dashboard.setState({ currentCall: outgoingCall });
           outgoingCall.on('stream', function (theirStream) {
+            listening = false;
             dashboard.toggleLoading(false);
             theirVideo.src = URL.createObjectURL(theirStream);
             dashboard.setPartner(theirStream.id);
@@ -94,15 +206,18 @@ class Dashboard extends React.Component {
           dashboard.endChat();
         });
       }, 200);
-    }, function (error) { 
-      console.log(error); 
+    }, function (error) {
+      console.log(error);
     });
   }
 
-  endChat() {
+  endChat(id) {
+
+    Meteor.users.update({_id: Meteor.userId()}, {$set: {'profile.status': 'waiting'}});
+
     // close peerjs connection
     this.state.currentCall.close();
- 
+
     // turn off camera and microphone
     this.state.localStream.getTracks().forEach(function(track) {
       track.stop();
@@ -111,10 +226,17 @@ class Dashboard extends React.Component {
     // remove streams from html video elements
     this.refs.myVideo.src = null;
     this.refs.theirVideo.src = null;
-    
-    this.setState({ 
+
+    this.setState({
       currentCall: false,
-      callDone: true 
+      callDone: true
+    });
+  }
+
+  setCurrentLanguage(language, oppositeLanguage) {
+    this.setState({
+      currentLanguage: language,
+      oppositeLanguage: oppositeLanguage
     });
   }
 
@@ -157,24 +279,29 @@ class Dashboard extends React.Component {
 
   handleTextSubmit() {
     var textToTranslate = this.state.translate;
-    var sourceLang = languageCodes[this.props.user.profile.language].toLowerCase();
-    var targetLang = languageCodes[this.props.user.profile.learning].toLowerCase();
+    var sourceLang = code.languageCodes[this.props.user.profile.language.toLowerCase()];
+    var targetLang = code.languageCodes[this.props.user.profile.learning.toLowerCase()];
     var context = this;
 
 
 
-    var url = 'https://www.googleapis.com/language/translate/v2?key=AIzaSyC9JmWKmSXKwWuB82g3aZKF9yiIczu5pao&q=' + 
+    var url = 'https://www.googleapis.com/language/translate/v2?ie=UTF-8&oe=UTF-8&key=AIzaSyC9JmWKmSXKwWuB82g3aZKF9yiIczu5pao&q=' +
               textToTranslate +
               '&source=' + sourceLang + '&'
               + 'target=' + targetLang;
 
-    request.get(url, function(err, res, body) {
+    request({
+      url: url,
+      method: 'GET',
+      headers:  {
+        'content-type': 'application/json'
+      }
+    }, function(err, res, body) {
       if (err) {
         console.error(err);
       } else {
-        console.log(JSON.parse(body).data.translations[0].translatedText);
+        console.log(body);
         var translatedText = (JSON.parse(body).data.translations[0].translatedText);
-        console.log('this is the translated text', translatedText);
         context.setState({
           translated: translatedText
         });
@@ -184,103 +311,136 @@ class Dashboard extends React.Component {
   }
 
 
-  flipCard() {
-     console.log(document.querySelector(".flip-container").className);
-      if (document.querySelector(".flip-container").className.includes('flip-activate')) {
-        document.querySelector(".flip-container").className = "flip-container"
+  flipCardTranslate() {
+     console.log(document.querySelector("#translate-container").className);
+      if (document.querySelector("#translate-container").className.includes('flip-activate')) {
+        document.querySelector("#translate-container").className = "flip-container"
       } else {
-        document.querySelector(".flip-container").className += ' flip-activate'
+        document.querySelector("#translate-container").className += ' flip-activate'
       }
    }
 
-  render() {
-    return (
-      <div className='dashboard'>
-        <div className='top'>
-          <div className='video-box'>
-            {!this.state.callDone &&
-              <div className='video-wrapper'>
-                {!this.state.callLoading && !this.state.currentCall &&
-                  <Welcome numMatches={this.props.onlineUsers.length}/>
-                }
-                {this.state.callLoading &&
-                  <Waiting />
-                }
-                <video ref='myVideo' id='myVideo' muted='true' autoPlay='true' 
-                  className={this.state.callLoading ? 'hidden' : null}></video>
-                <video ref='theirVideo' id='theirVideo' muted='true' autoPlay='true'
-                  className={this.state.callLoading ? 'hidden' : null}></video>
-              </div>
-            }
+   flipCardProfile() {
+     var classArray = document.querySelector("#profile-container").classList;
+     var isFlippedForward = classArray.contains('flip-forward');
+     var isFlippedBackward = classArray.contains('flip-backward');
 
-            {!this.state.currentCall && this.state.callDone &&
-              <Review 
-                partner={this.state.partner}
-                clearPartner={this.clearPartner.bind(this)}
-              />
-            }
-          </div>
-          <div className='profile'>
-            <div className='sign-out'>
-              <AccountsUIWrapper />
-            </div>
-            <UserProfile user={this.props.user}/>
-          </div>
-        </div>
-        <div className='bottom'>
-          <div className='text-box'>
-          {
-            this.state.partner &&
+     if (isFlippedForward || isFlippedBackward) {
+       document.querySelector("#profile-container").classList.toggle('flip-forward');
+       document.querySelector("#profile-container").classList.toggle('flip-backward');
+     } else {
+       document.querySelector("#profile-container").classList.toggle('flip-forward');
+     }
+   }
 
-            <div className="clock-suggestion-wrapper">
-              <div className="flip-container">
-                <div className="flipper">
-                  <div className="front">
-                    <Clock partner={this.state.partner} callDone={this.state.callDone} handleSpeechActive={this.flipCard.bind(this)}/>
-                  </div>
-                  <div className="back">
-                    <SpeechToTextBox handleSpeechActive={this.flipCard.bind(this)} currentLanguage={this.props.user.profile.language.toLowerCase()} languageToLearn={this.props.user.profile.learning.toLowerCase()}/>
-                  </div>
-                </div>
-              </div>
-              <GoogleTranslate translated={this.state.translated} handleTextChange={this.handleTextChange.bind(this)} handleTextSubmit={this.handleTextSubmit.bind(this)}/>
-            </div>
-          }
-            {
-              !this.state.partner &&
-              <div className='waiting-for-match'>Waiting for match...</div>
-            }
-          </div>
-          <div className='new-chat'>
-            <div className='selected-language'>
-              Selected Languages
-            </div>
-            <div className='language'>
-              {
-               `${this.props.user.profile.language} / 
-                ${this.props.user.profile.learning}`
-              }
-            </div>
-            <div className='button-wrapper'>
-              {!this.props.onlineUsers[0] &&
-                <button>Waiting</button>
-              }
-              {this.props.onlineUsers[0] && !this.state.currentCall &&
-                <button onClick={this.startChat.bind(this, this.props.onlineUsers, this.props.peer)}>
-                  Start Chat
-                </button>
-              }
-              {this.state.currentCall &&
-                <button onClick={this.endChat.bind(this)}>
-                  End Chat
-                </button>
-              }
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+
+   render() {
+     var context = this;
+     return (
+       <div className='dashboard'>
+         <div className='top'>
+           <div className='video-box'>
+             {!this.state.callDone &&
+               <div className='video-wrapper'>
+                 {!this.state.callLoading && !this.state.currentCall &&
+                   <Welcome numMatches={this.props.onlineUsers.length}/>
+                 }
+                 {this.state.callLoading &&
+                   <Waiting />
+                 }
+                 <video ref='myVideo' id='myVideo' muted='true' autoPlay='true'
+                   className={this.state.callLoading ? 'hidden' : null}></video>
+                 <video ref='theirVideo' id='theirVideo' autoPlay='true'
+                   className={this.state.callLoading ? 'hidden' : null}></video>
+               </div>
+             }
+
+             {!this.state.currentCall && this.state.callDone &&
+               <Review
+                 partner={this.state.partner}
+                 clearPartner={this.clearPartner.bind(this)}
+               />
+             }
+           </div>
+
+
+             <div className="flip-container" id="profile-container">
+               <div className="flipper">
+                 <div className="front">
+                   <div className='profile'>
+                     <div className='sign-out'>
+                       <img src='http://res.cloudinary.com/small-change/image/upload/v1478038849/BitmapIcon_lkjnj3.png'
+                        className='menu-icon' onClick={function(){context.flipCardProfile()}}/>
+                       <AccountsUIWrapper />
+                     </div>
+                     <UserProfile user={this.props.user}/>
+                   </div>
+                 </div>
+                 <div className="back">
+                   <div className='profile'>
+                   <img src='http://res.cloudinary.com/small-change/image/upload/v1478038849/BitmapIcon_lkjnj3.png'
+                    className='menu-icon' onClick={function(){context.flipCardProfile()}}/>
+                     <p> hello world </p>
+                   </div>
+                 </div>
+               </div>
+             </div>
+
+         </div>
+         <div className='bottom'>
+           <div className='text-box'>
+           {
+             this.state.partner &&
+
+             <div className="clock-suggestion-wrapper">
+               <div className="flip-container bea" id="translate-container">
+                 <div className="flipper">
+                   <div className="front">
+                     <Clock setCurrentLanguage={this.setCurrentLanguage.bind(this)} partner={this.state.partner} callDone={this.state.callDone} handleSpeechActive={this.flipCardTranslate.bind(this)}/>
+                   </div>
+                   <div className="back">
+                     <SpeechToTextBox handleSpeechActive={this.flipCardTranslate.bind(this)} currentLanguage={this.state.currentLanguage} oppositeLanguage={this.state.oppositeLanguage}/>
+                   </div>
+                 </div>
+               </div>
+               <GoogleTranslate translated={this.state.translated} handleTextChange={this.handleTextChange.bind(this)} handleTextSubmit={this.handleTextSubmit.bind(this)}/>
+             </div>
+           }
+             {
+               !this.state.partner &&
+               <div className='waiting-for-match'>Waiting for match...</div>
+             }
+           </div>
+           <div className='new-chat'>
+             <div className='selected-language'>
+               Selected Languages
+             </div>
+             <div className='language'>
+               {
+                `${this.props.user.profile.language} /
+                 ${this.props.user.profile.learning}`
+               }
+             </div>
+             <div className='button-wrapper'>
+               {!this.props.onlineUsers[0] &&
+                 <button>Waiting</button>
+               }
+               {this.props.onlineUsers[0] && !this.state.currentCall &&
+                 <button onClick={this.chatify.bind(this, this.props.peer)}>
+                   Start Chat
+                 </button>
+               }
+               {this.state.currentCall &&
+                 <button onClick={this.endOfChat.bind(this)}>
+                   End Chat
+                 </button>
+               }
+             </div>
+           </div>
+         </div>
+       </div>
+     );
+   }
 }
 
 export default Dashboard;
