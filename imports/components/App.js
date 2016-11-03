@@ -21,7 +21,7 @@ const App = ({
   user, 
   loading,
   peer,
-  Translations
+  translations
 }) => {
   if (!loading && user) {
     if (!validateProfile(user, 'profile', 'complete')) {
@@ -39,7 +39,7 @@ const App = ({
           language={user.profile.language}
           peer={peer}
           user={user}
-          Translations={Translations}
+          translations={translations}
         />
       );
     }

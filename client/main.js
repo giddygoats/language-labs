@@ -3,7 +3,7 @@ import React               from 'react';
 import { render }          from 'react-dom';
 import { Meteor }          from 'meteor/meteor';
 import { createContainer } from 'meteor/react-meteor-data';
-
+import Translations     from '../imports/collections.js';
 import '../imports/accountsConfig.js';
 import './styles.scss';
 
@@ -28,15 +28,18 @@ const AppContainer = createContainer(() => {
 
   const presencesSub = Meteor.subscribe('presences');
   const usersSub     = Meteor.subscribe('users');
-  Meteor.subscribe("translations", {
-    onReady: function () { console.log("onReady And the Items actually Arrive", arguments); },
-    onError: function () { console.log("onError", arguments); }
-  });
+
+  // var Translations = new Mongo.Collection('translations');
+
+  const translationsSub = Meteor.subscribe("translationsChannel");
+
+  if (translationsSub.ready()) {
+    console.log('Translations: ', Translations.find().fetch());
+  }
+
   const user         = Meteor.users.findOne(Meteor.userId());
   const userIds      = Meteor.presences.find().map(presence => presence.userId);
   const loading      = !usersSub.ready() && !presencesSub.ready();
-
-
   const onlineUsers  = Meteor.users.find({ 
     $and: [ 
       { _id: { $in: userIds, $ne: Meteor.userId() } }, 

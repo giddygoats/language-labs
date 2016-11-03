@@ -1,6 +1,5 @@
 import { Meteor } from 'meteor/meteor';
-import Translations from './translations.js'
-
+import Translations from '../imports/collections.js'
 
 Meteor.startup(function () {
 
@@ -12,9 +11,8 @@ Meteor.startup(function () {
     return Meteor.users.find({});
   });
 
-  Meteor.publish('translations', function () {
-    console.log(Translations.find().fetch());
-    return Translations.find({});
+  Meteor.publish('translationsChannel', function () {
+    return Translations.find();
   });
 
   Meteor.methods({

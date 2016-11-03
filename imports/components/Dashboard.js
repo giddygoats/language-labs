@@ -187,10 +187,10 @@ class Dashboard extends React.Component {
         });
 
         // in request, save translated text, plain text, fluent language, learning lanugauge
-        // and user id to Translations table 
+        // and user id to translations table 
         const user_id = Meteor.userId();
-        console.log('Meteor.Translations ', Meteor.Translations);
-        Meteor.Translations.insert({
+        console.log('this.props.translations ', this.props.translations);
+        this.props.translations.insert({
                               userId: user_id,
                               fromLanguage: context.props.user.profile.language,
                               fromText: textToTranslate,
@@ -276,7 +276,7 @@ class Dashboard extends React.Component {
                   <div className='profile'>
                   <img src='http://res.cloudinary.com/small-change/image/upload/v1478038849/BitmapIcon_lkjnj3.png'
                    className='menu-icon' onClick={function(){context.flipCardProfile()}}/>
-                    <p> hello world </p>
+                    {this.props.translations[0]}
                   </div>
                 </div>
               </div>
