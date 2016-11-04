@@ -8,10 +8,12 @@ class TranslationPanel extends React.Component {
     context = this;
     console.log('props inside TranslationPanel: ', this.props.translation)
     return (
-      <div className='container'>
-        <p> <b>From: </b>{context.props.translation ? context.props.translation.fromText : ''} </p>
-        <p> <b>To: </b>{context.props.translation ? context.props.translation.toText : ''} </p>
-        <hr/>
+      <div>
+        <div className='translation-panel-box'>
+          <p className='to-text'> {context.props.translation ? context.props.translation.toText : ''} </p>
+          <p className='from-text'> {context.props.translation ? context.props.translation.fromText : ''} </p>
+        </div>
+        <hr className='translation-panel-line' />
       </div>
     );
   }

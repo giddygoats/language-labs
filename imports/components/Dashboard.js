@@ -269,8 +269,11 @@ class Dashboard extends React.Component {
                 </div>
                 <div className="back">
                   <div className='profile'>
-                  <img src='http://res.cloudinary.com/small-change/image/upload/v1478038849/BitmapIcon_lkjnj3.png'
-                   className='menu-icon' onClick={function(){context.flipCardProfile()}}/>
+                  <div className='sign-out'>
+                    <img src='http://res.cloudinary.com/small-change/image/upload/v1478038849/BitmapIcon_lkjnj3.png'
+                     className='menu-icon' onClick={function(){context.flipCardProfile()}}/>
+                     <p className='translations-header'> Words you could be a bit rusty on... </p>
+                  </div>
 
                    {context.props.translations[0].map((translationObj, i) => 
                     <TranslationPanel translation={translationObj} key={i} />

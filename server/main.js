@@ -12,8 +12,20 @@ Meteor.startup(function () {
   });
 
   Meteor.publish('translationsChannel', function () {
-    return Translations.find();
+    console.log('UserId: ', this.userId);
+    console.log('Translations: ', Translations.find({
+                                                      $or: [
+                                                        { userId: this.userId },
+                                                      ],
+                                                    }).fetch());
+    return Translations.find({
+          $or: [
+            { userId: this.userId },
+          ],
+        });
   });
+
+
 
   Meteor.methods({
     'updateRating'({newReviews, _id}) {
