@@ -62,9 +62,7 @@ class Dashboard extends React.Component {
         stream = strm;
         startify();
       });
-
     }
-    init();
 
 
     //now that the stream is established, let's start streaming and find a partner!
@@ -77,8 +75,9 @@ class Dashboard extends React.Component {
       console.log('partner: ', partner);
       //call handler: does partner exist?  If so, call them!  If not, start listening.
       if (partner) {
-        Meteor.users.update({_id: clientID},{$set: {'profile.status': ('calling ' + partner._id)}});
+        Meteor.users.update({_id: clientID},{$set: {'profile.callStatus': ('calling ' + partner._id)}});
         var outgoingCall = peer.call(partner.profile.peerId, stream);
+        console.log('partner id: ', partner._id);
         middleify(outgoingCall);
       } else {
         Meteor.users.update({_id: clientID}, {$set: {'profile.status': 'listening'}});
@@ -91,7 +90,8 @@ class Dashboard extends React.Component {
       }
       Meteor.users.update({_id: clientID}, {$set: {'profile.status': 'answering'}});
       users = Meteor.users.find({}).fetch();
-      partner = users.reduce(function(a, c){return c.profile.status === ('calling ' + clientID) ? c : a})
+      partner = users.reduce(function(a, c){return c.profile.callStatus === ('calling ' + dashboard.props.user._id) ? c : a}, null)
+      console.log('dashboard: ', partner, dashboard);
       incomingCall.answer(stream);
       middleify(incomingCall);
       peer.off('call', answerify);
@@ -118,7 +118,7 @@ class Dashboard extends React.Component {
 
     //periodic check to see if the partner has disconnected: if so, end call.
     var endify = function(id){
-      console.log('so fetch: ', Meteor.users.find({_id: id}).fetch());
+      console.log('so fetch: ', Meteor.users.find({_id: id}).fetch()[0]);
       if (Meteor.users.find({_id: id}).fetch()[0].profile.status !== 'streaming' || dashboard.props.user.profile.status !== 'streaming') {
         dashboard.endChat(clientID);
       } else {
@@ -130,6 +130,7 @@ class Dashboard extends React.Component {
         }
       }
     }
+    init();
   }
 
   endOfChat(){
