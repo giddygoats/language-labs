@@ -52,7 +52,7 @@ class Dashboard extends React.Component {
 
       client = users.reduce(function(a, c){
         return c._id === clientID ? c: a;
-      }, null)
+      }, null);
 
       Meteor.users.update({_id: clientID}, {$set: {'profile.peerId': peer.id}});
 
@@ -66,63 +66,57 @@ class Dashboard extends React.Component {
 
 
     //now that the stream is established, let's start streaming and find a partner!
-    var startify = function(){
+    function startify(){
 
-      //find a partner!  Look for someone with the same language who is listening for a call.
+      //find a partner!  Look for someone with compatible languages who is listening for a call.
       partner = users.filter(function(x){
         return x.profile.status === 'listening' && x.profile.language.toLowerCase() === client.profile.learning.toLowerCase() && x.profile.learning.toLowerCase() === client.profile.language.toLowerCase();
       })[0];
-      console.log('partner: ', partner);
+
       //call handler: does partner exist?  If so, call them!  If not, start listening.
       if (partner) {
         Meteor.users.update({_id: clientID},{$set: {'profile.callStatus': ('calling ' + partner._id)}});
         var outgoingCall = peer.call(partner.profile.peerId, stream);
-        console.log('partner id: ', partner._id);
         middleify(outgoingCall);
       } else {
         Meteor.users.update({_id: clientID}, {$set: {'profile.status': 'listening'}});
       }
     }
 
-    var answerify = function(incomingCall){
-      if (!stream){
-        init();
-      }
-      Meteor.users.update({_id: clientID}, {$set: {'profile.status': 'answering'}});
-      users = Meteor.users.find({}).fetch();
-      partner = users.reduce(function(a, c){return c.profile.callStatus === ('calling ' + dashboard.props.user._id) ? c : a}, null)
-      console.log('dashboard: ', partner, dashboard);
-      incomingCall.answer(stream);
-      middleify(incomingCall);
+    //someone's calling, answer the phone!
+    function answerify(incomingCall){
+      navigator.mediaDevices.getUserMedia({video: true, audio: true}).then(function(strm){
+        dashboard.setState({ localStream: strm });
+        stream = strm;
+        Meteor.users.update({_id: clientID}, {$set: {'profile.status': 'answering'}});
+        users = Meteor.users.find({}).fetch();
+        partner = users.reduce(function(a, c){return c.profile.callStatus === ('calling ' + dashboard.props.user._id) ? c : a}, null)
+        incomingCall.answer(stream);
+        middleify(incomingCall);
+      });
       peer.off('call', answerify);
     }
 
     peer.on('call', answerify)
 
-    //calls are established, middle call handler
-    var middleify = function(callStream){
-      console.log('callstream: ', callStream, partner);
+    //calls are established, middle call handler: sets up end check and
+    function middleify (callStream){
       dashboard.setState({ localStream: stream, currentCall: callStream, partner: partner });
-      Meteor.users.update({_id: clientID}, {$set: {'profile.status': 'streaming'/*, 'profile.peerId': peer.id, 'profile.streamId': myStream.id*/}});
-      var strm = function(theirStream) {
+      Meteor.users.update({_id: clientID}, {$set: {'profile.status': 'streaming', 'profile.streamId': stream.id}});
+      callStream.on('stream', function(theirStream) {
         dashboard.toggleLoading(false);
-        console.log('streamifying');
         theirVideo.src = URL.createObjectURL(theirStream);
         myVideo.src = URL.createObjectURL(stream);
         dashboard.setPartner(theirStream.id);
         setTimeout(function(){endify(partner._id)}, 2000);
-      };
-
-      callStream.on('stream', strm);
+      });
     }
 
     //periodic check to see if the partner has disconnected: if so, end call.
-    var endify = function(id){
-      console.log('so fetch: ', Meteor.users.find({_id: id}).fetch()[0]);
+    function endify(id){
       if (Meteor.users.find({_id: id}).fetch()[0].profile.status !== 'streaming' || dashboard.props.user.profile.status !== 'streaming') {
         dashboard.endChat(clientID);
       } else {
-        console.log(dashboard);
         if (dashboard.props.user.profile.status === 'streaming'){
           setTimeout(function(){
             endify(id);
@@ -136,7 +130,6 @@ class Dashboard extends React.Component {
   endOfChat(){
     Meteor.users.update({'_id': Meteor.userId()}, {$set: {'profile.status': 'waiting'}});
     this.props.user.profile.status = 'waiting';
-    console.log(this);
   }
 
   startChat(users, peer) {
