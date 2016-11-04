@@ -101,7 +101,7 @@ class Dashboard extends React.Component {
 
     //calls are established, middle call handler: sets up end check and
     function middleify (callStream){
-      dashboard.setState({ localStream: stream, currentCall: callStream, partner: partner });
+      dashboard.setState({ 'localStream': stream, 'currentCall': callStream, 'partner': partner });
       Meteor.users.update({_id: clientID}, {$set: {'profile.status': 'streaming', 'profile.streamId': stream.id}});
       callStream.on('stream', function(theirStream) {
         dashboard.toggleLoading(false);
@@ -208,6 +208,7 @@ class Dashboard extends React.Component {
     Meteor.users.update({_id: Meteor.userId()}, {$set: {'profile.status': 'waiting'}});
 
     // close peerjs connection
+    console.log(this);
     this.state.currentCall.close();
 
     // turn off camera and microphone
