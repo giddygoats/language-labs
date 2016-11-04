@@ -11,6 +11,8 @@ import Waiting           from './Waiting';
 import Welcome           from './Welcome';
 import GoogleTranslate   from './GoogleTranslate';
 import SpeechToTextBox   from './SpeechToTextBox';
+import TranslationPanel from './TranslationPanel';
+
 var request = require('request');
 var languageCodes = require( '../../public/languageCodes');
 
@@ -29,6 +31,7 @@ class Dashboard extends React.Component {
       speechToText: false,
       currentLanguage: null,
       oppositeLanguage: null,
+      translations: this.props.translations || null
     };
 
     this.startChat.bind(this);
@@ -181,6 +184,7 @@ class Dashboard extends React.Component {
       if (err) {
         console.error(err);
       } else {
+        const user_id = Meteor.userId();
         var translatedText = (JSON.parse(body).data.translations[0].translatedText);
         context.setState({
           translated: translatedText
@@ -188,15 +192,7 @@ class Dashboard extends React.Component {
 
         // in request, save translated text, plain text, fluent language, learning lanugauge
         // and user id to translations table 
-        const user_id = Meteor.userId();
-        console.log('this.props.translations ', this.props.translations);
-        this.props.translations.insert({
-                              userId: user_id,
-                              fromLanguage: context.props.user.profile.language,
-                              fromText: textToTranslate,
-                              toLanguage: context.props.user.profile.learning,
-                              toText: translatedText,
-                            })
+        context.props.insertTranslation(user_id, translatedText, textToTranslate, targetLang, sourceLang);
       }
     });
 
@@ -228,10 +224,9 @@ class Dashboard extends React.Component {
   }
 
 
-
   render() {
     var context = this;
-    console.log('state of dashboard: ', this.state);
+    console.log('Dashboard state: ', this.state)
     return (
       <div className='dashboard'>
         <div className='top'>
@@ -276,7 +271,11 @@ class Dashboard extends React.Component {
                   <div className='profile'>
                   <img src='http://res.cloudinary.com/small-change/image/upload/v1478038849/BitmapIcon_lkjnj3.png'
                    className='menu-icon' onClick={function(){context.flipCardProfile()}}/>
-                    {this.props.translations[0]}
+
+                   {context.props.translations[0].map((translationObj, i) => 
+                    <TranslationPanel translation={translationObj} key={i} />
+                   )}
+
                   </div>
                 </div>
               </div>

@@ -405,6 +405,7 @@ textarea {
       flex-direction: column;
       box-shadow: $shadow;
       background-color: white;
+      overflow: scroll;
 
       .sign-out {
         flex: 1;
@@ -718,3 +719,6 @@ textarea {
   height:350px;
 }
 
+.container {
+  padding: 0px 15px 0px 15px;
+}

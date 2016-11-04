@@ -33,9 +33,19 @@ const AppContainer = createContainer(() => {
 
   const translationsSub = Meteor.subscribe("translationsChannel");
 
-  if (translationsSub.ready()) {
-    console.log('Translations: ', Translations.find().fetch());
-  }
+  var translations = [];
+  translations[0] = Translations.find().fetch();
+
+  var insertTranslation = function(userId, toText, fromText, toLanguage, fromLanguage, ) {
+    Translations.insert({
+      userId: userId,
+      fromLanguage: fromLanguage,
+      fromText: fromText,
+      toLanguage: toLanguage,
+      toText: toText,
+    });
+  };
+  
 
   const user         = Meteor.users.findOne(Meteor.userId());
   const userIds      = Meteor.presences.find().map(presence => presence.userId);
@@ -52,6 +62,8 @@ const AppContainer = createContainer(() => {
     user,
     loading,
     peer,
+    translations,
+    insertTranslation
   };
 }, App);
 
