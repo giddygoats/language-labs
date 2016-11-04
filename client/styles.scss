@@ -692,6 +692,13 @@ textarea {
   height: 160px;
 }
 
+/* hide back of pane during swap */
+.front, .back {
+  backface-visibility: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
 
 /* hide back of pane during swap */
 .front, .back {
@@ -749,4 +756,17 @@ textarea {
   font-weight: 100;
   padding-bottom:7px;
 
+}
+
+.dashboard .top .profile .user-profile .profile-input-wrapper {
+  padding-top:8px;
+  width: 100%;
+  justify-content: space-around;
+  align-items: center;
+  flex-direction: column;
+  max-height: 12vh;
+}
+
+.dashboard .top .profile {
+  height:350px;
 }
