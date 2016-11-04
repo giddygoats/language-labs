@@ -36,15 +36,116 @@ class Dashboard extends React.Component {
     this.endChat.bind(this);
   }
 
+  chatify(peer) {
+    var dashbaord, myVideo, theirVideo, clientID, users, partner, stream, client;
+
+    init = () => {
+      dashboard = this;
+      myVideo = this.refs.myVideo;
+      theirVideo = this.refs.theirVideo;
+
+      dashboard.toggleLoading(true);
+      clientID = Meteor.userId();
+      users = Meteor.users.find({}).fetch();
+      partner;
+      stream;
+
+      client = users.reduce(function(a, c){
+        return c._id === clientID ? c: a;
+      }, null)
+
+      Meteor.users.update({_id: clientID}, {$set: {'profile.peerId': peer.id}});
+
+      //establish a video/audio stream, then continue!
+      navigator.mediaDevices.getUserMedia({video: true, audio: true}).then(function(strm){
+        dashboard.setState({ localStream: strm });
+        stream = strm;
+        startify();
+      });
+
+    }
+    init();
+
+
+    //now that the stream is established, let's start streaming and find a partner!
+    var startify = function(){
+
+      //find a partner!  Look for someone with the same language who is listening for a call.
+      partner = users.filter(function(x){
+        return x.profile.status === 'listening' && x.profile.language.toLowerCase() === client.profile.learning.toLowerCase() && x.profile.learning.toLowerCase() === client.profile.language.toLowerCase();
+      })[0];
+      console.log('partner: ', partner);
+      //call handler: does partner exist?  If so, call them!  If not, start listening.
+      if (partner) {
+        Meteor.users.update({_id: clientID},{$set: {'profile.status': ('calling ' + partner._id)}});
+        var outgoingCall = peer.call(partner.profile.peerId, stream);
+        middleify(outgoingCall);
+      } else {
+        Meteor.users.update({_id: clientID}, {$set: {'profile.status': 'listening'}});
+      }
+    }
+
+    var answerify = function(incomingCall){
+      if (!stream){
+        init();
+      }
+      Meteor.users.update({_id: clientID}, {$set: {'profile.status': 'answering'}});
+      users = Meteor.users.find({}).fetch();
+      partner = users.reduce(function(a, c){return c.profile.status === ('calling ' + clientID) ? c : a})
+      incomingCall.answer(stream);
+      middleify(incomingCall);
+      peer.off('call', answerify);
+    }
+
+    peer.on('call', answerify)
+
+    //calls are established, middle call handler
+    var middleify = function(callStream){
+      console.log('callstream: ', callStream, partner);
+      dashboard.setState({ localStream: stream, currentCall: callStream, partner: partner });
+      Meteor.users.update({_id: clientID}, {$set: {'profile.status': 'streaming'/*, 'profile.peerId': peer.id, 'profile.streamId': myStream.id*/}});
+      var strm = function(theirStream) {
+        dashboard.toggleLoading(false);
+        console.log('streamifying');
+        theirVideo.src = URL.createObjectURL(theirStream);
+        myVideo.src = URL.createObjectURL(stream);
+        dashboard.setPartner(theirStream.id);
+        setTimeout(function(){endify(partner._id)}, 2000);
+      };
+
+      callStream.on('stream', strm);
+    }
+
+    //periodic check to see if the partner has disconnected: if so, end call.
+    var endify = function(id){
+      console.log('so fetch: ', Meteor.users.find({_id: id}).fetch());
+      if (Meteor.users.find({_id: id}).fetch()[0].profile.status !== 'streaming' || dashboard.props.user.profile.status !== 'streaming') {
+        dashboard.endChat(clientID);
+      } else {
+        console.log(dashboard);
+        if (dashboard.props.user.profile.status === 'streaming'){
+          setTimeout(function(){
+            endify(id);
+          }, 2000);
+        }
+      }
+    }
+  }
+
+  endOfChat(){
+    Meteor.users.update({'_id': Meteor.userId()}, {$set: {'profile.status': 'waiting'}});
+    this.props.user.profile.status = 'waiting';
+    console.log(this);
+  }
+
   startChat(users, peer) {
     // save context
     var dashboard = this;
-    var listening = true;
 
     // get html video elements
     var myVideo = this.refs.myVideo;
     var theirVideo = this.refs.theirVideo;
-    
+
     // get audio/video permissions
     navigator.getUserMedia({ audio: true, video: true }, function (stream) {
       // save your users own feed to state
@@ -103,15 +204,18 @@ class Dashboard extends React.Component {
           dashboard.endChat();
         });
       }, 200);
-    }, function (error) { 
-      console.log(error); 
+    }, function (error) {
+      console.log(error);
     });
   }
 
-  endChat() {
+  endChat(id) {
+
+    Meteor.users.update({_id: Meteor.userId()}, {$set: {'profile.status': 'waiting'}});
+
     // close peerjs connection
     this.state.currentCall.close();
- 
+
     // turn off camera and microphone
     this.state.localStream.getTracks().forEach(function(track) {
       track.stop();
@@ -120,10 +224,10 @@ class Dashboard extends React.Component {
     // remove streams from html video elements
     this.refs.myVideo.src = null;
     this.refs.theirVideo.src = null;
-    
-    this.setState({ 
+
+    this.setState({
       currentCall: false,
-      callDone: true 
+      callDone: true
     });
   }
 
@@ -179,7 +283,7 @@ class Dashboard extends React.Component {
 
 
 
-    var url = 'https://www.googleapis.com/language/translate/v2?ie=UTF-8&oe=UTF-8&key=AIzaSyC9JmWKmSXKwWuB82g3aZKF9yiIczu5pao&q=' + 
+    var url = 'https://www.googleapis.com/language/translate/v2?ie=UTF-8&oe=UTF-8&key=AIzaSyC9JmWKmSXKwWuB82g3aZKF9yiIczu5pao&q=' +
               textToTranslate +
               '&source=' + sourceLang + '&'
               + 'target=' + targetLang;
@@ -242,15 +346,15 @@ class Dashboard extends React.Component {
                  {this.state.callLoading &&
                    <Waiting />
                  }
-                 <video ref='myVideo' id='myVideo' muted='true' autoPlay='true' 
+                 <video ref='myVideo' id='myVideo' muted='true' autoPlay='true'
                    className={this.state.callLoading ? 'hidden' : null}></video>
-                 <video ref='theirVideo' id='theirVideo' muted='true' autoPlay='true'
+                 <video ref='theirVideo' id='theirVideo' autoPlay='true'
                    className={this.state.callLoading ? 'hidden' : null}></video>
                </div>
              }
 
              {!this.state.currentCall && this.state.callDone &&
-               <Review 
+               <Review
                  partner={this.state.partner}
                  clearPartner={this.clearPartner.bind(this)}
                />
@@ -311,7 +415,7 @@ class Dashboard extends React.Component {
              </div>
              <div className='language'>
                {
-                `${this.props.user.profile.language} / 
+                `${this.props.user.profile.language} /
                  ${this.props.user.profile.learning}`
                }
              </div>
@@ -320,12 +424,12 @@ class Dashboard extends React.Component {
                  <button>Waiting</button>
                }
                {this.props.onlineUsers[0] && !this.state.currentCall &&
-                 <button onClick={this.startChat.bind(this, this.props.onlineUsers, this.props.peer)}>
+                 <button onClick={this.chatify.bind(this, this.props.peer)}>
                    Start Chat
                  </button>
                }
                {this.state.currentCall &&
-                 <button onClick={this.endChat.bind(this)}>
+                 <button onClick={this.endOfChat.bind(this)}>
                    End Chat
                  </button>
                }
