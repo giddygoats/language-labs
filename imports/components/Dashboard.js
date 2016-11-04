@@ -111,8 +111,6 @@ class Dashboard extends React.Component {
         myVideo.src = URL.createObjectURL(stream);
         dashboard.setPartner(theirStream.id);
         setTimeout(function(){endify(partner._id)}, 2000);
-        callstream.off('stream', strm);
-
       };
 
       callStream.on('stream', strm);
