@@ -1,7 +1,5 @@
 var speechCodes = {};
 
-var populateObj = function()
-
 // Afrikaans af
 // Basque eu
 // Bulgarian bg

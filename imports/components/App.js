@@ -20,7 +20,9 @@ const App = ({
   onlineUsers, 
   user, 
   loading,
-  peer
+  peer,
+  translations,
+  insertTranslation
 }) => {
   if (!loading && user) {
     if (!validateProfile(user, 'profile', 'complete')) {
@@ -38,6 +40,8 @@ const App = ({
           language={user.profile.language}
           peer={peer}
           user={user}
+          translations={translations}
+          insertTranslation={insertTranslation}
         />
       );
     }
