@@ -74,6 +74,19 @@ textarea {
     position: relative;
 }
 
+.flip-translate-container {
+  perspective: 1000px;
+  transform: rotateY(0deg);
+    transition: 0.6s;
+    transform-style: preserve-3d;
+    position: relative;
+}
+
+.flip-translate-container, .front, .back {
+  width: 400px;
+  height: 160px;
+}
+
 .flip-activate {
   transform: rotateY(180deg);
     transition: 0.6s;
@@ -110,7 +123,6 @@ textarea {
 
 .button-wrapper {
   flex: 3;
-  display: flex;
   align-items: center;
   justify-content: center;
 
@@ -405,9 +417,9 @@ textarea {
       flex-direction: column;
       box-shadow: $shadow;
       background-color: white;
-      overflow: scroll;
 
       .sign-out {
+        flex: 1;
         min-height: 34px;
         text-align: right;
         padding-left: 9px;
@@ -620,7 +632,6 @@ textarea {
 
       .button-wrapper {
         flex: 3;
-        display: flex;
         align-items: center;
         justify-content: center;
 
@@ -654,16 +665,6 @@ textarea {
   margin-left: 4%;
 }
 
-.menu-icon {
-  cursor:pointer;
-}
-
-.translations-header {
-  display: inline;
-  margin-right: 6%;
-}
-
-
 .flip-container {
   perspective: 1000px;
 }
@@ -692,13 +693,6 @@ textarea {
   height: 160px;
 }
 
-/* hide back of pane during swap */
-.front, .back {
-  backface-visibility: hidden;
-  position: absolute;
-  top: 0;
-  left: 0;
-}
 
 /* hide back of pane during swap */
 .front, .back {
@@ -735,38 +729,3 @@ textarea {
   height:350px;
 }
 
-.translation-panel-box {
-  padding: 0px 4px 0px 4px;
-}
-
-.translation-panel-line {
-  border: #f1f1f1 solid 0.1px;
-}
-
-.to-text {
-  text-align: center;
-  font-size: 15px;
-  margin-bottom:-7px;
-  font-weight: 800;
-}
-
-.from-text {
-  text-align: center;
-  font-size: 12px;
-  font-weight: 100;
-  padding-bottom:7px;
-
-}
-
-.dashboard .top .profile .user-profile .profile-input-wrapper {
-  padding-top:8px;
-  width: 100%;
-  justify-content: space-around;
-  align-items: center;
-  flex-direction: column;
-  max-height: 12vh;
-}
-
-.dashboard .top .profile {
-  height:350px;
-}

@@ -13,8 +13,6 @@ class SpeechToTextBox extends React.Component {
   }
 
 
-
-
   componentDidMount() {
   	var context = this;
   	var handleTranslation = function (text) {
